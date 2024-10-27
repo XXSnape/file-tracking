@@ -21,7 +21,6 @@ def main():
         local_tracking=local_tracking,
         interval=settings.APP.INTERVAL,
     )
-
     app.endless_synchronization()
 
 

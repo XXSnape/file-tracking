@@ -83,7 +83,7 @@ class YandexApi(HandleRequestMixin):
         except FileNotFoundError:
             logger.error("Не найден файл по пути {}", file_path)
 
-    def overwrite(self, path: str):
+    def overwrite(self, path: str) -> None:
         self.load(path, overwrite=OVERWRITING)
 
     def delete(self, filename: str) -> None:

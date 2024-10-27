@@ -1,3 +1,5 @@
+from collections.abc import Iterable, Callable
+from concurrent.futures import ThreadPoolExecutor
 from time import sleep
 
 from api import YandexApi
@@ -9,7 +11,7 @@ from services.system import LocaleTracking
 class FileSynchronization:
     def __init__(
         self, yandex_api: YandexApi, local_tracking: LocaleTracking, interval: int
-    ):
+    ) -> None:
         self.yandex_api = yandex_api
         self.locale_tracking = local_tracking
         self.interval = interval
@@ -18,15 +20,18 @@ class FileSynchronization:
     def __compare_files(cls, files1: set[str], files2: set[str]) -> set[str]:
         return files1 - files2
 
-    def _upload_new_files_on_disk(self, local_files: set[str], cloud_files: set[str]):
-        new_files = self.__compare_files(local_files, cloud_files)
-        for file in new_files:
-            self.yandex_api.load(file)
+    def _manipulate_files(
+        self, files1: set[str], files2: set[str], func: Callable
+    ) -> None:
+        files = self.__compare_files(files1, files2)
+        self._interaction_with_api(files=files, func=func)
 
-    def _delete_unnecessary_files(self, local_files: set[str], cloud_files: set[str]):
-        unnecessary_files = self.__compare_files(cloud_files, local_files)
-        for file in unnecessary_files:
-            self.yandex_api.delete(file)
+    @classmethod
+    def _interaction_with_api(cls, files: Iterable, func: Callable) -> None:
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            tasks = [executor.submit(func, file) for file in files]
+            for task in tasks:
+                task.result()
 
     def _get_files_not_replaced_on_disk(
         self, local_files: set[str]
@@ -55,10 +60,16 @@ class FileSynchronization:
             cloud_files = self.yandex_api.get_files_on_disk()
             if cloud_files is None:
                 continue
-            self._upload_new_files_on_disk(local_files, cloud_files)
-            self._delete_unnecessary_files(local_files, cloud_files)
+            self._manipulate_files(
+                files1=local_files, files2=cloud_files, func=self.yandex_api.load
+            )
+            self._manipulate_files(
+                files1=cloud_files, files2=local_files, func=self.yandex_api.delete
+            )
             files_not_replaces = self._get_files_not_replaced_on_disk(local_files)
             if files_not_replaces is None:
                 continue
-            self._overwrite_files(files_not_replaces)
+            self._interaction_with_api(
+                files=files_not_replaces, func=self.yandex_api.overwrite
+            )
             sleep(self.interval)
