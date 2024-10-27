@@ -1,7 +1,5 @@
 from time import sleep
 
-from loguru import logger
-
 from api import YandexApi
 from datetime import datetime
 
@@ -22,21 +20,23 @@ class FileSynchronization:
 
     def _upload_new_files_on_disk(self, local_files: set[str], cloud_files: set[str]):
         new_files = self.__compare_files(local_files, cloud_files)
-        logger.debug("new files: {}", str(new_files))
         for file in new_files:
             self.yandex_api.load(file)
 
     def _delete_unnecessary_files(self, local_files: set[str], cloud_files: set[str]):
         unnecessary_files = self.__compare_files(cloud_files, local_files)
-        logger.debug("deleted files: {}", str(unnecessary_files))
         for file in unnecessary_files:
             self.yandex_api.delete(file)
 
-    def _get_files_not_replaced_on_disk(self, local_files: set[str]) -> tuple[str, ...]:
+    def _get_files_not_replaced_on_disk(
+        self, local_files: set[str]
+    ) -> tuple[str, ...] | None:
         local_files = self.locale_tracking.get_files_and_latest_modification(
             local_files
         )
         cloud_files = self.yandex_api.get_info()
+        if cloud_files is None:
+            return None
         return tuple(
             filename
             for filename, modified in local_files.items()
@@ -49,11 +49,16 @@ class FileSynchronization:
             self.yandex_api.overwrite(file)
 
     def endless_synchronization(self):
+        self.yandex_api.create_cloud_folder_if_not_exists()
         while True:
             local_files = self.locale_tracking.get_files_in_local_folder()
             cloud_files = self.yandex_api.get_files_on_disk()
+            if cloud_files is None:
+                continue
             self._upload_new_files_on_disk(local_files, cloud_files)
             self._delete_unnecessary_files(local_files, cloud_files)
             files_not_replaces = self._get_files_not_replaced_on_disk(local_files)
+            if files_not_replaces is None:
+                continue
             self._overwrite_files(files_not_replaces)
             sleep(self.interval)
