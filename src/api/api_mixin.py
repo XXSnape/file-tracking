@@ -1,11 +1,12 @@
 from typing import BinaryIO
 
-from loguru import logger
-
 import requests
+from loguru import logger
 
 
 class HandleRequestMixin:
+    """Миксин для обработки запросов к api"""
+
     @classmethod
     def _make_request(
         cls,
@@ -17,6 +18,19 @@ class HandleRequestMixin:
         headers: dict[str, str] | None = None,
         files: dict[str, BinaryIO] | None = None,
     ) -> requests.Response | None:
+        """
+        Делает запрос на нужный ресурс, обрабатывает возможные ошибки и возвращает ответ
+
+        :param url: url, на который нужно отправить запрос
+        :param error_text: текст ошибки, который должен быть залогирован в случае исключения
+        :param method: метод отправки запроса
+        :param statuses: словарь со статусами и сообщениями, которые будут залогированы,
+         если статус ответа совпадет хотя бы с одним из переденных
+        :param params: параметры запроса
+        :param headers: заголовки запроса
+        :param files: файлы, отправляемые на сервер
+        :return: requests.Response или None, если произойдет ошибка
+        """
         try:
             response = requests.request(
                 method=method, url=url, params=params, headers=headers, files=files
@@ -25,10 +39,11 @@ class HandleRequestMixin:
                 for status, message in statuses.items():
                     if response.status_code == status:
                         logger.info("{}", message)
+                        return response
             return response
         except requests.ConnectionError:
             logger.error("Не удалось соединиться с сервером. {}", error_text)
         except requests.Timeout:
             logger.error("Сервер не ответил на запрос. {}", error_text)
-        except Exception as e:
+        except requests.RequestException as e:
             logger.error("{}. {}", str(e), error_text)
