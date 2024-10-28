@@ -37,16 +37,23 @@ class FileSynchronization:
         return files1 - files2
 
     def _manipulate_files(
-        self, files1: set[str], files2: set[str], func: Callable
+        self,
+        files1: set[str],
+        files2: set[str],
+        no_files: str,
+        func: Callable,
     ) -> None:
         """
         Получает разницу между множествами с файлами и вызывает _interaction_with_api
         :param files1: файлы из первого множества
         :param files2: файлы из второго множества
+        :param no_files: сообщение, выводящееся в лог, если нет измененных файлов
         :param func: функция для взаимодействия с api
         :return: None
         """
         files = self.__compare_files(files1, files2)
+        if not files:
+            logger.info("{}", no_files)
         self._interaction_with_api(files=files, func=func)
 
     @classmethod
@@ -103,15 +110,23 @@ class FileSynchronization:
             local_files = self._locale_tracking.get_files_in_local_folder()
             cloud_files = self._yandex_api.get_files_on_disk()
             if cloud_files is None:
+                sleep(5)
                 continue
             self._manipulate_files(
-                files1=local_files, files2=cloud_files, func=self._yandex_api.load
+                files1=local_files,
+                files2=cloud_files,
+                no_files="Нет новых файлов",
+                func=self._yandex_api.load,
             )
             self._manipulate_files(
-                files1=cloud_files, files2=local_files, func=self._yandex_api.delete
+                files1=cloud_files,
+                files2=local_files,
+                no_files="Нет удаленных файлов",
+                func=self._yandex_api.delete,
             )
             files_not_replaces = self._get_files_not_replaced_on_disk(local_files)
             if files_not_replaces is None:
+                sleep(5)
                 continue
             self._interaction_with_api(
                 files=files_not_replaces, func=self._yandex_api.reload

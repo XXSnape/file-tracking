@@ -1,5 +1,6 @@
 import os.path
 from datetime import datetime
+from time import sleep
 
 import requests
 from loguru import logger
@@ -45,9 +46,25 @@ class YandexApi(HandleRequestMixin):
             params=self._path_to_folder,
             headers=self._authorization,
         )
+        if response is None:
+            while response is None:
+                logger.error(
+                    "Произошла ошибка при получении ответ от сервера. Пробуем снова"
+                )
+                sleep(5)
+                response = self._make_request(
+                    url="https://cloud-api.yandex.net/v1/disk/resources",
+                    method="put",
+                    error_text="Облачная директория не создана",
+                    statuses={
+                        requests.codes.created: "Облачная директория создана успешно"
+                    },
+                    params=self._path_to_folder,
+                    headers=self._authorization,
+                )
         if response.status_code == requests.codes.unauthorized:
-            logger.info("Не получилось авторизоваться, проверьте токен")
-            exit(0)
+            logger.error("Не получилось авторизоваться, проверьте токен")
+            exit(-1)
 
     def get_files_on_disk(self) -> set[str]:
         """
@@ -123,7 +140,7 @@ class YandexApi(HandleRequestMixin):
                     },
                 )
         except FileNotFoundError:
-            logger.error("Не найден файл по пути {}", file_path)
+            logger.exception("Не найден файл по пути {}", file_path)
 
     def reload(self, filename: str) -> None:
         """

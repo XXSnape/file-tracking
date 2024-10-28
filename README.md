@@ -18,7 +18,7 @@
 git https://github.com/raydqver/File_tracking.git
 ```
 
-* Создать файл .env, подобный .env.template, в корне проекта, только с нужными данными:
+* Создать файл .env, подобный .env.template в корне проекта только с нужными данными:
 
 1. [x] TOKEN - токен для работы с приложением [Яндекс Диска](https://yandex.ru/dev/disk-api/doc/ru/concepts/quickstart).
 Обязательно выдайте права для взаимодействия с приложением.
