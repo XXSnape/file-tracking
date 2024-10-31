@@ -42,7 +42,11 @@ class HandleRequestMixin:
                         return response
             return response
         except requests.ConnectionError:
-            logger.exception("Не удалось соединиться с сервером. {}", error_text)
+            logger.exception(
+                "Не удалось соединиться с сервером,"
+                " проверьте соединение с Интернетом. {}",
+                error_text,
+            )
             return
         except requests.Timeout:
             logger.exception("Сервер не ответил на запрос. {}", error_text)
