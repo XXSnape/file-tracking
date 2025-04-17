@@ -15,7 +15,7 @@
 ## Как запустить приложение?
 * Склонировать репозиторий на локальную машину
 ```sh
-git https://github.com/raydqver/File_tracking.git
+git https://github.com/XXSnape/file-tracking.git
 ```
 
 * Создать файл .env, подобный .env.template в корне проекта только с нужными данными:
